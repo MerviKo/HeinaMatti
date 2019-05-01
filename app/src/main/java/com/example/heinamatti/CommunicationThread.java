@@ -5,12 +5,12 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 
-public class CommunitcationThread extends Thread{
+public class CommunicationThread extends Thread{
     private final Socket socket;
     private final InputStream inputStream;
     private final OutputStream outputStream;
 
-    public CommunitcationThread(Socket sock){
+    public CommunicationThread(Socket sock){
         socket = sock;
         InputStream inPut =  null;
         OutputStream outPut = null;
@@ -32,7 +32,7 @@ public class CommunitcationThread extends Thread{
             try{
                 bytes = inputStream.read(buffer);
                 MainActivity.UIupdater.obtainMessage(0,bytes,-1,buffer)
-                        .sendToTarger();
+                        .sendToTarget();
             } catch (IOException e){
                 break;
             }
