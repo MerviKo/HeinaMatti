@@ -1,5 +1,6 @@
 package com.example.heinamatti;
 
+import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.content.Intent;
@@ -8,6 +9,7 @@ import android.os.Handler;
 import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
 
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 
@@ -21,15 +23,18 @@ import android.widget.TextView;
 
 
 public class MainActivity extends AppCompatActivity {
-    static final String KNOWME = "ESP8266";
-    static final String SERVER_IP_ADDRESS = "192.168.4.2"; // Arduino IP address
+    //static final String HELLO = "esp8266";
+    static final String HELLO = "HELLO";
+    static final String TEMPERATURE = "TEMP";
+    static final String SERVER_IP_ADDRESS = "192.168.4.1"; // Arduino IP address
+    private static final String TAG = "HeinaMatti logger";
 
     InetAddress serverAddress;
     Socket socket;
     static TextView msgMessageReceived;
     EditText txtMessage;
 
-    CommunicationThread communitcationThread;
+    public CommunicationThread communitcationThread;
 
     static Handler UIupdater = new Handler(){
         @Override
@@ -38,8 +43,9 @@ public class MainActivity extends AppCompatActivity {
             byte[] buffer = (byte[]) msg.obj;
             String strReceived = new String(buffer);
             strReceived = strReceived.substring(0,numOfBytesReceived);
-            msgMessageReceived.setText(msgMessageReceived.getText()
-                    .toString() + strReceived);
+            Log.d(TAG, "Received message: " + strReceived);
+            //msgMessageReceived.setText(msgMessageReceived.getText()
+            //        .toString() + strReceived);
             }
     };
 
@@ -68,16 +74,17 @@ public class MainActivity extends AppCompatActivity {
             try {
                 // ---create a socket---
                 serverAddress = InetAddress.getByName(SERVER_IP_ADDRESS);
-                socket = new Socket(serverAddress, 7001); //IP, PORT NUMBER
+                socket = new Socket(serverAddress, 80); //IP, PORT NUMBER
                 communitcationThread = new CommunicationThread(socket);
                 communitcationThread.start();
                 // ---sign in for the user; sends the nick name---
-                sendToServer(KNOWME);
+                sendToServer(HELLO);
+                sendToServer(TEMPERATURE);
                 //
             } catch (UnknownHostException e) {
-
+                Log.e(TAG, "Exception: " + e.toString());
             } catch (IOException e) {
-
+                Log.e(TAG, "Exception: " + e.toString());
             }
             return null;
         }
@@ -96,8 +103,8 @@ public class MainActivity extends AppCompatActivity {
         yhteysButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-               /* WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
-                wifiManager.setWifiEnabled(true);*/
+               WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
+               wifiManager.setWifiEnabled(true);
 
                 Intent main2Activity = new Intent(getApplicationContext(), Main2Activity.class);
                 startActivity(main2Activity);
