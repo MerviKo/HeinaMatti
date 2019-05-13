@@ -1,6 +1,10 @@
 package com.example.heinamatti;
 
+import android.content.Context;
+import android.net.wifi.WifiConfiguration;
+import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
+import android.net.wifi.ScanResult;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.content.Intent;
@@ -8,10 +12,14 @@ import android.content.pm.ActivityInfo;
 import android.os.Handler;
 import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
+import android.app.ListActivity;
+import android.content.BroadcastReceiver;
 
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ListView;
+import java.util.List;
 
 import java.net.InetAddress;
 import java.net.Socket;
@@ -19,6 +27,7 @@ import java.io.IOException;
 import java.net.UnknownHostException;
 
 import android.widget.EditText;
+import android.widget.ListView;
 import android.widget.TextView;
 
 
@@ -26,13 +35,15 @@ public class MainActivity extends AppCompatActivity {
     //static final String HELLO = "esp8266";
     static final String HELLO = "HELLO";
     static final String TEMPERATURE = "TEMP";
-    static final String SERVER_IP_ADDRESS = "192.168.4.1"; // Arduino IP address
+
+    ListView list;
+    String wifis[];
+
     private static final String TAG = "HeinaMatti logger";
 
-    InetAddress serverAddress;
-    Socket socket;
-    static TextView msgMessageReceived;
-    EditText txtMessage;
+
+    static String msgMessageReceived;
+    WifiManager wifiManager;
 
     public CommunicationThread communitcationThread;
 
@@ -44,8 +55,7 @@ public class MainActivity extends AppCompatActivity {
             String strReceived = new String(buffer);
             strReceived = strReceived.substring(0,numOfBytesReceived);
             Log.d(TAG, "Received message: " + strReceived);
-            //msgMessageReceived.setText(msgMessageReceived.getText()
-            //        .toString() + strReceived);
+            msgMessageReceived = strReceived;
             }
     };
 
@@ -59,11 +69,7 @@ public class MainActivity extends AppCompatActivity {
     public class CloseSocketTask extends AsyncTask<Void, Void, Void> {
         @Override
         protected Void doInBackground(Void... params) {
-            try {
-                socket.close();
-            } catch (IOException e) {
-
-            }
+            communitcationThread.close();
             return null;
         }
     }
@@ -71,21 +77,11 @@ public class MainActivity extends AppCompatActivity {
     public class CreateCommThreadTask extends AsyncTask<Void, Integer, Void> {
         @Override
         protected Void doInBackground(Void... params){
-            try {
-                // ---create a socket---
-                serverAddress = InetAddress.getByName(SERVER_IP_ADDRESS);
-                socket = new Socket(serverAddress, 80); //IP, PORT NUMBER
-                communitcationThread = new CommunicationThread(socket);
-                communitcationThread.start();
-                // ---sign in for the user; sends the nick name---
-                sendToServer(HELLO);
-                sendToServer(TEMPERATURE);
-                //
-            } catch (UnknownHostException e) {
-                Log.e(TAG, "Exception: " + e.toString());
-            } catch (IOException e) {
-                Log.e(TAG, "Exception: " + e.toString());
-            }
+            communitcationThread = CommunicationThread.getInstance();
+            communitcationThread.start();
+            // ---sign in for the user; sends the nick name---
+            sendToServer(HELLO);
+            //
             return null;
         }
     }
@@ -94,24 +90,62 @@ public class MainActivity extends AppCompatActivity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        communitcationThread = CommunicationThread.getInstance();
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT); /*set display portrait*/
-
-        // txtMessage = (EditText)findViewById(R.id.)
-
+        sendToServer("TimerGet");
 
         Button yhteysButton = findViewById(R.id.yhteysButton);
         yhteysButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-               WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
-               wifiManager.setWifiEnabled(true);
+                connectToWifi();
+                if (msgMessageReceived =="TimerON"){
+                   Intent main3Activity = new Intent(getApplicationContext(), Main3Activity.class);
+                   startActivity(main3Activity);
 
-                Intent main2Activity = new Intent(getApplicationContext(), Main2Activity.class);
-                startActivity(main2Activity);
-                //sendToServer(txtMessage.getText().toString());
+                }else if (msgMessageReceived == "TimerOFF"){
+                   Intent main2Activity = new Intent(getApplicationContext(), Main2Activity.class);
+                   startActivity(main2Activity);
+                }
             }
 
         });
+    }
+
+    public void connectToWifi(){
+        try{
+            WifiManager wifiManager = (WifiManager) super.getSystemService(android.content.Context.WIFI_SERVICE);
+            WifiConfiguration wc = new WifiConfiguration();
+            WifiInfo wifiInfo = wifiManager.getConnectionInfo();
+            wc.SSID = "FaryLink_26E82E";
+            wc.preSharedKey = "\"PASSWORD\"";
+            wc.status = WifiConfiguration.Status.ENABLED;
+            wc.allowedProtocols.set(WifiConfiguration.Protocol.WPA);
+            wc.allowedKeyManagement.set(WifiConfiguration.KeyMgmt.WPA_PSK);
+
+            wifiManager.setWifiEnabled(true);
+            int netId = wifiManager.addNetwork(wc);
+            if (netId == -1) {
+                netId = getExistingNetworkId(wc.SSID);
+            }
+            wifiManager.disconnect();
+            wifiManager.enableNetwork(netId, true);
+            wifiManager.reconnect();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    private int getExistingNetworkId(String SSID) {
+        WifiManager wifiManager = (WifiManager) super.getSystemService(Context.WIFI_SERVICE);
+        List<WifiConfiguration> configuredNetworks = wifiManager.getConfiguredNetworks();
+        if (configuredNetworks != null) {
+            for (WifiConfiguration existingConfig : configuredNetworks) {
+                if (existingConfig.SSID.equals(SSID)) {
+                    return existingConfig.networkId;
+                }
+            }
+        }
+        return -1;
     }
         public void sendToServer(String message){
             byte[] theByteArray = message.getBytes();

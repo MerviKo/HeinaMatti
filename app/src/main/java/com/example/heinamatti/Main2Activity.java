@@ -3,24 +3,26 @@ package com.example.heinamatti;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.icu.util.Calendar;
+import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
-import java.io.IOException;
+
 import java.io.DataInputStream;
-import java.io.OutputStream;
 import java.io.DataOutputStream;
 import java.net.Socket;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.Locale;
+import com.example.heinamatti.CommunicationThread;
+
 
 public class Main2Activity extends AppCompatActivity {
 
@@ -34,24 +36,54 @@ public class Main2Activity extends AppCompatActivity {
     private RadioGroup radioGroup;
     RadioButton radioButton2;
     private Button okButton;
-    TextView msgFromServer;
+    static TextView tmpFromServer;
     Calendar c = Calendar.getInstance();
+    static String msgMessageReceived;
 
+    private static final String TAG = "HeinaMatti logger";
 
-    int sendValue;
+    String sendValue;
+    int time1 = 4;
+    int time2 = 6;
+    int time3 = 8;
+    int time4 = 10;
+    int time5 = 12;
+    int selectedId;
+
     String sendValue2;
     /* int hostPort = socket.getPort();*/
+
+    public CommunicationThread communitcationThread;
+
+    static Handler UIupdater = new Handler(){
+        @Override
+        public void handleMessage(Message msg){
+            int numOfBytesReceived = msg.arg1;
+            byte[] buffer = (byte[]) msg.obj;
+            String strReceived = new String(buffer);
+            strReceived = strReceived.substring(0,numOfBytesReceived);
+            Log.d(TAG, "Received message: " + strReceived);
+            msgMessageReceived = strReceived;
+            if (msgMessageReceived.startsWith(CommunicationThread.TEMPERATURE_RESP)){
+                String temperature =  msgMessageReceived.replace(CommunicationThread.TEMPERATURE_RESP,"");
+                tmpFromServer.setText("Lämpötila on: "+temperature);
+            }
+        }
+    };
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main2);
+        tmpFromServer = (TextView)findViewById(R.id.textView2);
 
-
+        communitcationThread = CommunicationThread.getInstance();
 
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT); /*set display portrait*/
         addListenerOnButton();
+        sendToServer(CommunicationThread.TEMPERATURE_GET);
+
     }
 
     public void addListenerOnButton() {
@@ -63,50 +95,42 @@ public class Main2Activity extends AppCompatActivity {
 
             @Override
             public void onClick(View view) {
-                int selectedId = radioGroup.getCheckedRadioButtonId();
-
                 radioButton2 = (RadioButton) findViewById(selectedId);
-                Intent main3Activity = new Intent(getApplicationContext(), Main3Activity.class);
-                startActivity(main3Activity);
-               /* Toast.makeText(Main2Activity.this,
-                        radioButton2.getText(), Toast.LENGTH_SHORT).show();*/
-
+                sendToServer(sendValue);
+                Intent mainActivity = new Intent(getApplicationContext(), MainActivity.class);
+                startActivity(mainActivity);
             }
         });
         radioGroup.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(RadioGroup group, int checkedId) {
-                // checkedId is the RadioButton selected
-                int selectedId = radioGroup.getCheckedRadioButtonId();
-                msgFromServer = (TextView)findViewById(R.id.textView2);
-                msgFromServer.setText("Lämpötila on nyt: "+"C");
-               // radioButton2 = (RadioButton) findViewById(selectedId);
                 // get current time and add selected hours to tell user when is feeding time
-
-
+                selectedId = radioGroup.getCheckedRadioButtonId();
                 int hours = c.get(Calendar.HOUR_OF_DAY);
                 int minutes = c.get(Calendar.MINUTE);
                 int nextHour = 0;
 
                 if (selectedId == R.id.radioButton1) {
-                    nextHour = hours + 4;
+                    nextHour = hours + time1;
+                    sendValue = "time1";
                 } else if (selectedId == R.id.radioButton2) {
-                    nextHour = hours + 6;
+                    nextHour = hours + time2;
+                    sendValue = "time2";
                 } else if (selectedId == R.id.radioButton3) {
-                    nextHour = hours + 8;
+                    nextHour = hours + time3;
+                    sendValue = "time3";
                 } else if (selectedId == R.id.radioButton4) {
-                    nextHour = hours + 10;
+                    nextHour = hours + time4;
+                    sendValue = "time4";
                 } else if (selectedId == R.id.radioButton5) {
-                    nextHour = hours + 12;
+                    nextHour = hours + time5;
+                    sendValue = "time5";
                 }
 
                 if (nextHour >= 24) {
                     nextHour = nextHour - 24;
                 }
 
-
-                //Toast.makeText(Main2Activity.this,
-                //      radioButton2.getText(), Toast.LENGTH_SHORT).show();
                 Toast.makeText(getApplicationContext(), "Heinät annetaan seuraavan kerran " +
                         String.format(Locale.getDefault(),"%02d", nextHour) + ":" +
                         String.format(Locale.getDefault(),"%02d", minutes), Toast.LENGTH_SHORT).show();
@@ -114,19 +138,51 @@ public class Main2Activity extends AppCompatActivity {
         });
 
 
-
-            /*
-            try {
-                Socket socket = new Socket("192.168.0.1", 7001);  //1755);
-                DataOutputStream DOS = new DataOutputStream(socket.getOutputStream());
-                DOS.writeUTF("HELLO");
-                socket.close();
-            }catch(IOException e){};
-
-
-            sendtoserver
-*/
             }
+
+    public void sendToServer(String message){
+        byte[] theByteArray = message.getBytes();
+        new Main2Activity.WriteToServerTask().execute(theByteArray);
+    }
+
+    public class WriteToServerTask extends AsyncTask<byte[], Void, Void> {
+        protected Void doInBackground(byte[]... data) {
+            communitcationThread.write(data[0]);
+            return null;
+        }
+    }
+
+    public class CloseSocketTask extends AsyncTask<Void, Void, Void> {
+        @Override
+        protected Void doInBackground(Void... params) {
+            communitcationThread.close();
+            return null;
+        }
+    }
+
+    public class CreateCommThreadTask extends AsyncTask<Void, Integer, Void> {
+        @Override
+        protected Void doInBackground(Void... params){
+            communitcationThread = CommunicationThread.getInstance();
+           // communitcationThread.start();
+            // ---sign in for the user; sends the nick name---
+            //
+            return null;
+        }
+    }
+
+
+    @Override
+    public void onResume(){
+        super.onResume();
+        new CreateCommThreadTask().execute();
+    }
+
+    @Override
+    public void onPause(){
+        super.onPause();
+        new CloseSocketTask();
+    }
 
 
 }
