@@ -17,11 +17,12 @@ public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "HeinaMatti MainAct";
     private static Context context;
-
     static String msgMessageReceived = "";
 
     public CommunicationThread communitcationThread;
 
+
+    /*Handle incoming message */
     static Handler UIupdater = new Handler(){
         @Override
         public void handleMessage(Message msg){
@@ -133,7 +134,6 @@ public class MainActivity extends AppCompatActivity {
     }
     @Override
     public void onStop(){
-        // communitcationThread.running = false;
         super.onStop();
         new CloseSocketTask();
     }

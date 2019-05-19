@@ -17,21 +17,11 @@ import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.net.Socket;
 import java.util.Locale;
-//import com.example.heinamatti.CommunicationThread;
+
 
 
 public class Main2Activity extends AppCompatActivity {
-
-   // static final String SERVER_IP_ADDRESS = "192.168.0.177";
-
-    Socket socket;
-    DataOutputStream out;
-    DataInputStream dataInputStream;
-    TextView teksti;
 
     private RadioGroup radioGroup;
     RadioButton radioButton2;
@@ -49,9 +39,6 @@ public class Main2Activity extends AppCompatActivity {
     int time4 = 10;
     int time5 = 12;
     int selectedId;
-
-    String sendValue2;
-    /* int hostPort = socket.getPort();*/
 
     public CommunicationThread communitcationThread;
 

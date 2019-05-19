@@ -33,6 +33,7 @@ public class Main3Activity extends AppCompatActivity {
 
     public CommunicationThread communitcationThread;
 
+    /*Handle incomming message */
     static Handler UIupdater = new Handler(){
         @Override
         public void handleMessage(Message msg){

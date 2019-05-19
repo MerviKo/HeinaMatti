@@ -2,7 +2,6 @@ package com.example.heinamatti;
 
 import android.icu.util.Calendar;
 import android.util.Log;
-import android.widget.Toast;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -11,7 +10,7 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.Arrays;
-import java.util.Locale;
+
 
 public class CommunicationThread extends Thread{
     private Socket socket = null;
@@ -32,8 +31,6 @@ public class CommunicationThread extends Thread{
     public static final String TIME_SET = "TIME_SET";
 
     public volatile boolean running = true;
-
-    // other instance variables can be here
 
     private CommunicationThread() {};
 
