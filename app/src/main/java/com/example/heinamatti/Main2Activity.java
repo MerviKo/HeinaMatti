@@ -21,7 +21,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.net.Socket;
 import java.util.Locale;
-import com.example.heinamatti.CommunicationThread;
+//import com.example.heinamatti.CommunicationThread;
 
 
 public class Main2Activity extends AppCompatActivity {
@@ -40,7 +40,7 @@ public class Main2Activity extends AppCompatActivity {
     Calendar c = Calendar.getInstance();
     static String msgMessageReceived;
 
-    private static final String TAG = "HeinaMatti logger";
+    private static final String TAG = "HeinaMatti Main2Act";
 
     String sendValue;
     int time1 = 4;
@@ -96,7 +96,7 @@ public class Main2Activity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 radioButton2 = (RadioButton) findViewById(selectedId);
-                sendToServer(sendValue);
+                sendToServer(CommunicationThread.TIMER_SET + sendValue);
                 Intent mainActivity = new Intent(getApplicationContext(), MainActivity.class);
                 startActivity(mainActivity);
             }
@@ -164,9 +164,6 @@ public class Main2Activity extends AppCompatActivity {
         @Override
         protected Void doInBackground(Void... params){
             communitcationThread = CommunicationThread.getInstance();
-           // communitcationThread.start();
-            // ---sign in for the user; sends the nick name---
-            //
             return null;
         }
     }

@@ -16,17 +16,20 @@ import android.icu.util.Calendar;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.Locale;
 
 public class Main3Activity extends AppCompatActivity {
 
     static TextView timeInformation;
     static TextView weatherInformation;
-    Button nollausButton;
+    static String timeInfo = "";
+    static String weather = "";
+    Button resetButton;
     Button okButton;
     Button noButton;
     static String msgMessageReceived;
-    private static final String TAG = "HeinaMatti logger";
+    static String temperature;
+    static String timeGet;
+    private static final String TAG = "HeinaMatti Main3Act";
 
     public CommunicationThread communitcationThread;
 
@@ -39,38 +42,35 @@ public class Main3Activity extends AppCompatActivity {
             strReceived = strReceived.substring(0,numOfBytesReceived);
             Log.d(TAG, "Received message: " + strReceived);
             msgMessageReceived = strReceived;
-            if (msgMessageReceived.startsWith(CommunicationThread.TEMPERATURE_RESP)){
-                String temperature =  msgMessageReceived.replace(CommunicationThread.TEMPERATURE_RESP,"");
-                weatherInformation.setText("Lämpötila on: "+temperature+ " C");
-            }
-            if(msgMessageReceived.startsWith(CommunicationThread.TIME_SET)){
-                String timeGet = msgMessageReceived.replace(CommunicationThread.TIME_SET,"");
+            if (msgMessageReceived.contains(CommunicationThread.TEMPERATURE_RESP)){
+                temperature =  msgMessageReceived.replace(CommunicationThread.TEMPERATURE_RESP,"");
+                weatherInformation.setText(temperature+ " C");
+                            }
+            if(msgMessageReceived.contains(CommunicationThread.TIME_SET)){
+                timeGet = msgMessageReceived.replace(CommunicationThread.TIME_SET,"");
                 milSecToTime(timeGet);
-                timeInformation.setText("Heinät annetaan klo: "+timeGet);
+                timeInformation.setText(timeGet);
             }
         }
     };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        Log.i(TAG, "onCreate");
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main3);
         weatherInformation =(TextView) findViewById(R.id.textView3);
         timeInformation = (TextView)findViewById(R.id.textView2);
         communitcationThread = CommunicationThread.getInstance();
-        sendToServer(CommunicationThread.TIME_GET);
-        sendToServer(CommunicationThread.TEMPERATURE_GET);
 
-
-
-        nollausButton = findViewById(R.id.nollausButton);
-        nollausButton.setOnClickListener(new View.OnClickListener() {
+        resetButton = findViewById(R.id.resetButton);
+        resetButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
 
                 Toast.makeText(getApplicationContext(), "Ajastin nollataan.", Toast.LENGTH_SHORT).show();
-                sendToServer("Nollaus");
-
+                sendToServer("TIMER_RESET");
+                Main3Activity.timeInfo = "";
                 Intent mainActivity = new Intent(getApplicationContext(), MainActivity.class);
                 startActivity(mainActivity);
             }
@@ -80,13 +80,13 @@ public class Main3Activity extends AppCompatActivity {
         okButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-
+                Main3Activity.timeInfo = "";
                 Intent main2Activity = new Intent(getApplicationContext(), Main2Activity.class);
                 startActivity(main2Activity);
             }
         });
 
-
+        noButton = findViewById(R.id.noButton);
         noButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -134,9 +134,6 @@ public class Main3Activity extends AppCompatActivity {
         @Override
         protected Void doInBackground(Void... params){
             communitcationThread = CommunicationThread.getInstance();
-            communitcationThread.start();
-            // ---sign in for the user; sends the nick name---
-            //
             return null;
         }
     }
@@ -148,8 +145,31 @@ public class Main3Activity extends AppCompatActivity {
 
     @Override
     public void onResume(){
+        Log.i(TAG, "onResume");
         super.onResume();
         new CreateCommThreadTask().execute();
+        int counter = 5;
+        while (weather.equals("") && counter > 0){
+            counter--;
+            try {
+                Thread.sleep(250);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        weatherInformation.setText(weather);
+        counter = 5;
+        while (timeInfo.equals("") && counter > 0){
+            Log.i(TAG, "timeInfo: " + timeInfo);
+            counter--;
+            try {
+                Thread.sleep(250);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        Log.i(TAG, "timeInfo: " + timeInfo);
+        timeInformation.setText(timeInfo);
     }
 
     @Override

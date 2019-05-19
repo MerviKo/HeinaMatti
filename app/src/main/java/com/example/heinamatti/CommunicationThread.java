@@ -1,5 +1,6 @@
 package com.example.heinamatti;
 
+import android.icu.util.Calendar;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -9,6 +10,8 @@ import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.Arrays;
+import java.util.Locale;
 
 public class CommunicationThread extends Thread{
     private Socket socket = null;
@@ -18,14 +21,17 @@ public class CommunicationThread extends Thread{
 
     private static CommunicationThread INSTANCE = null;
 
+    private static final String TAG = "HeinaMatti CommThread";
+
 //Message adributes between Arduino and Ardroid
     public static final String TEMPERATURE_GET = "TEMP";
     public static final String TEMPERATURE_RESP = "TEMP:";
     public static final String TIMER_GET = "TIMER_GET";
     public static final String TIMER_SET = "TIMER_SET:";
-    static final String TIME_GET = "TIME_GET";
-    static final String TIME_SET = "TIME_SET";
+    public static final String TIME_GET = "TIME_GET";
+    public static final String TIME_SET = "TIME_SET";
 
+    public volatile boolean running = true;
 
     // other instance variables can be here
 
@@ -37,7 +43,6 @@ public class CommunicationThread extends Thread{
         }
         return(INSTANCE);
     }
-
 
     public void open(){
         InetAddress serverAddress = null;
@@ -78,19 +83,55 @@ public class CommunicationThread extends Thread{
     }
 
     public void run(){
-        byte[ ] buffer = new byte[1024];
+        byte[ ] buffer = new byte[128];
         int bytes;
 
         // sending received message for every activities
-        while(true){
+        while(running){
+            if (socket == null){
+                open();
+            }
+            Arrays.fill(buffer, 0, 127,(byte)0);
             try{
                 bytes = inputStream.read(buffer);
-                MainActivity.UIupdater.obtainMessage(0,bytes,-1,buffer)
-                        .sendToTarget();
-                Main2Activity.UIupdater.obtainMessage(0,bytes,-1,buffer)
-                        .sendToTarget();
-                Main3Activity.UIupdater.obtainMessage(0,bytes,-1,buffer)
-                        .sendToTarget();
+                if (bytes == -1){
+                    // Failed to read socket
+                    try {
+                        sleep(50);
+                    } catch (InterruptedException e1) {
+                        e1.printStackTrace();
+                    }
+                    continue;  // No data received, read again
+                }
+                String strReceived = new String(buffer);
+                Log.i(TAG, "Received: " + strReceived);
+                String commands [] = strReceived.split(";");
+                for (String str: commands) {
+                    Log.i(TAG, "Command: " + str);
+                    if (str.contains(CommunicationThread.TEMPERATURE_RESP)) {
+                        String temperature = str.replace(CommunicationThread.TEMPERATURE_RESP, "");
+                        Main3Activity.weather = temperature + " C";
+                    }
+                    if (str.contains(CommunicationThread.TIME_SET)) {
+                        String timeSet = str.replace(CommunicationThread.TIME_SET, "");
+                        Log.i(TAG, "timeSet: " + timeSet);
+                        Calendar c = Calendar.getInstance();
+                        Long millisecs = Long.valueOf(timeSet);
+                        int minutes = (int) (millisecs / 1000 / 60);
+                        Log.i(TAG, "Add " + String.valueOf(minutes) + " minutes");
+                        c.add(Calendar.MINUTE, minutes);
+                        String hay_time = String.valueOf(c.get(Calendar.HOUR)) + ":" + String.valueOf(c.get(Calendar.MINUTE));
+                        Main3Activity.timeInfo = hay_time;
+                    }
+                    int len = str.length();
+                    byte[] _buffer = str.getBytes();
+                    MainActivity.UIupdater.obtainMessage(0, len, -1, _buffer)
+                            .sendToTarget();
+                    Main2Activity.UIupdater.obtainMessage(0, len, -1, _buffer)
+                            .sendToTarget();
+                    Main3Activity.UIupdater.obtainMessage(0, len, -1, _buffer)
+                            .sendToTarget();
+                }
             } catch (IOException e){
                 socket = null;
                 try {

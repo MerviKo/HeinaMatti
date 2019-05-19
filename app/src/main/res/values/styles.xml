@@ -8,10 +8,14 @@
         <item name="colorAccent">@color/colorAccent</item>
     </style>
 
+    <style name="myFontView" parent="@android:style/Widget.TextView">
+       <item name="android:fontFamily">casual</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
     <style name="AppTheme.NoActionBar">
         <item name="windowActionBar">false</item>
-        <item name="windowNoTitle">true</item>
-    </style>
+        <item name="windowNoTitle">true</item>    </style>
 
     <style name="AppTheme.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />
 
